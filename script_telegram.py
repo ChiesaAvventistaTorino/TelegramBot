@@ -29,7 +29,7 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 POST_HOUR = 14  # Set the hour (24-hour format)
-POST_MINUTE = 20  # Set the minute
+POST_MINUTE = 30  # Set the minute
 
 # Initialize bot
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
