@@ -4,6 +4,7 @@ import os
 import aiohttp
 import datetime
 import logging
+import pytz  # Libreria per il fuso orario
 from telegram import Bot
 import asyncio
 import threading
@@ -15,24 +16,29 @@ def home():
     return "Hello, World!"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # Use Render's provided port, or default to 5000
+    port = int(os.environ.get("PORT", 5000))  # Usa la porta di Render o default 5000
     app.run(host="0.0.0.0", port=port)
 
-# Load environment variables
+# Carica le variabili d'ambiente
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
 
-# Configurations
+# Configurazioni
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-POST_HOUR = 15  # Set the hour (24-hour format)
-POST_MINUTE = 36  # Set the minute
 
-# Initialize bot
+# Imposta il fuso orario italiano (CET/CEST)
+ITALY_TZ = pytz.timezone("Europe/Rome")
+
+# Orario del post in formato 24h (ora italiana)
+POST_HOUR = 16  # Ora italiana (CET/CEST)
+POST_MINUTE = 36  # Minuto
+
+# Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-# Logging setup
+# Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -62,28 +68,30 @@ async def get_latest_video():
 async def post_to_telegram():
     title, url = await get_latest_video()
     if title and url:
-        message = f"🎥 Latest Video: {title}\n🔴 Watch here: {url}"
+        message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
         try:
             await bot.send_message(chat_id=CHAT_ID, text=message)
-            logger.info("Latest video posted to Telegram.")
+            logger.info("Ultimo video pubblicato su Telegram.")
         except Exception as e:
-            logger.error(f"Error sending message to Telegram: {e}")
+            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
     else:
-        message = "No recent video found."
+        message = "Nessun video recente trovato."
         try:
             await bot.send_message(chat_id=CHAT_ID, text=message)
-            logger.info("No video message sent.")
+            logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
-            logger.error(f"Error sending no-video message to Telegram: {e}")
+            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
 
 async def telegram_loop():
     while True:
-        now = datetime.datetime.now()
-        logger.info(f"Current time: {now.hour}:{now.minute}:{now.second}")  # Logging current time for debugging
+        now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
+        now_italy = now_utc.astimezone(ITALY_TZ)  # Converti all'orario italiano
 
-        if now.hour == POST_HOUR and now.minute == POST_MINUTE and now.second == 0:
+        logger.info(f"Orario italiano attuale: {now_italy.strftime('%H:%M:%S')}")  # Formato 24 ore
+
+        if now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
             await post_to_telegram()
-            await asyncio.sleep(60)  # Avoid duplicate messages in the same minute
+            await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
         await asyncio.sleep(1)
 
 def run_telegram():
