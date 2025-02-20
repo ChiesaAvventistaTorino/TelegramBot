@@ -6,8 +6,7 @@ import datetime
 import logging
 from telegram import Bot
 import asyncio
-import os
-
+import threading
 
 app = Flask(__name__)
 
@@ -15,10 +14,9 @@ app = Flask(__name__)
 def home():
     return "Hello, World!"
 
-if __name__ == '__main__':
+def run_flask():
     port = int(os.environ.get("PORT", 5000))  # Use Render's provided port, or default to 5000
     app.run(host="0.0.0.0", port=port)
-
 
 # Load environment variables
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
@@ -28,8 +26,8 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-POST_HOUR = 14  # Set the hour (24-hour format)
-POST_MINUTE = 30  # Set the minute
+POST_HOUR = 16  # Set the hour (24-hour format)
+POST_MINUTE = 29  # Set the minute
 
 # Initialize bot
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -41,7 +39,6 @@ logger = logging.getLogger(__name__)
 async def get_latest_video():
     url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={CHANNEL_ID}&type=video&order=date&key={YOUTUBE_API_KEY}"
     try:
-        # Making an asynchronous request to the YouTube API
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 response.raise_for_status()
@@ -49,7 +46,6 @@ async def get_latest_video():
 
         logger.info(f"API Response: {data}")  # Debugging line
 
-        # Check if we have videos
         if "items" in data and data["items"]:
             video_id = data["items"][0]["id"]["videoId"]
             video_title = data["items"][0]["snippet"]["title"]
@@ -68,7 +64,7 @@ async def post_to_telegram():
     if title and url:
         message = f"🎥 Latest Video: {title}\n🔴 Watch here: {url}"
         try:
-            response = await bot.send_message(chat_id=CHAT_ID, text=message)
+            await bot.send_message(chat_id=CHAT_ID, text=message)
             logger.info("Latest video posted to Telegram.")
         except Exception as e:
             logger.error(f"Error sending message to Telegram: {e}")
@@ -80,16 +76,25 @@ async def post_to_telegram():
         except Exception as e:
             logger.error(f"Error sending no-video message to Telegram: {e}")
 
-async def main():
+async def telegram_loop():
     while True:
         now = datetime.datetime.now()
         logger.info(f"Current time: {now.hour}:{now.minute}:{now.second}")  # Logging current time for debugging
 
-        # Check if it's the exact second when we want to post
         if now.hour == POST_HOUR and now.minute == POST_MINUTE and now.second == 0:
             await post_to_telegram()
-            break
-        await asyncio.sleep(1)  # Check every second
+            await asyncio.sleep(60)  # Avoid duplicate messages in the same minute
+        await asyncio.sleep(1)
+
+def run_telegram():
+    asyncio.run(telegram_loop())
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    flask_thread = threading.Thread(target=run_flask)
+    telegram_thread = threading.Thread(target=run_telegram)
+
+    flask_thread.start()
+    telegram_thread.start()
+
+    flask_thread.join()
+    telegram_thread.join()
