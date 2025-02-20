@@ -14,7 +14,7 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-POST_HOUR = 13  # Set the hour (24-hour format)
+POST_HOUR = 14  # Set the hour (24-hour format)
 POST_MINUTE = 50  # Set the minute
 
 # Initialize bot
