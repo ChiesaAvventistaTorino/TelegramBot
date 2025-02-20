@@ -1,3 +1,4 @@
+from flask import Flask
 from dotenv import load_dotenv
 import os
 import aiohttp
@@ -5,6 +6,19 @@ import datetime
 import logging
 from telegram import Bot
 import asyncio
+import os
+
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Hello, World!"
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))  # Use Render's provided port, or default to 5000
+    app.run(host="0.0.0.0", port=port)
+
 
 # Load environment variables
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
