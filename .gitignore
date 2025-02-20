@@ -1,0 +1,18 @@
+# Ignora il file .env che contiene dati sensibili
+.env
+
+# Ignora l'ambiente virtuale (se ne usi uno)
+.venv/
+venv/
+
+# Ignora file Python compilati
+*.pyc
+__pycache__
+
+# Ignora cartelle di sistema e IDE (come VSCode)
+.vscode/
+.idea/
+
+# Ignora altri file temporanei
+*.log
+*.bak
