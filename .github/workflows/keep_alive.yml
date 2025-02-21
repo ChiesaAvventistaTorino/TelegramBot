@@ -1,19 +1,29 @@
-name: Keep Render Alive
+name: Check and Deploy (Twice Daily)
 
 on:
   schedule:
-    - cron: "*/1 * * * *"  # Runs every 1 minute
+    - cron: "0 0,12 * * *"  # Esegui ogni giorno alle 00:00 e 12:00
 
 jobs:
-  ping:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render App
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Opzionale: Verifica che il servizio sia attivo prima di effettuare il deploy
+      - name: Check if service is up
         run: |
           RESPONSE=$(curl --write-out "%{http_code}" --silent --output /dev/null "https://telegrambot-1a6y.onrender.com")
           if [ "$RESPONSE" -ne 200 ]; then
-            echo "Failed to ping app: HTTP $RESPONSE"
-            exit 1
+            echo "Il servizio non è attivo. Avvio il deploy."
+          else
+            echo "Il servizio è attivo. Non è necessario il deploy."
+            exit 0  # Esci senza fare il deploy se il servizio è già attivo
           fi
 
-
+      # Fase di deploy
+      - name: Deploy to Render
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-curhokpu0jms73bubkfg \
+          -H "Authorization: Bearer rnd_IY3pwqr73mcOtty2Wk06jzt40BVC"
