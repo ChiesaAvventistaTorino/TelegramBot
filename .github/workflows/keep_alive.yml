@@ -9,4 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render App
-        run: curl -X GET "https://telegrambot-1a6y.onrender.com"
+        run: |
+          RESPONSE=$(curl --write-out "%{http_code}" --silent --output /dev/null "https://telegrambot-1a6y.onrender.com")
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Failed to ping app: HTTP $RESPONSE"
+            exit 1
+          fi
+
