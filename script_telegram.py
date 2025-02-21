@@ -33,7 +33,7 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
 POST_HOUR = 9  # Ora italiana (CET/CEST)
-POST_MINUTE = 24  # Minuto
+POST_MINUTE = 46  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -105,4 +105,3 @@ if __name__ == "__main__":
 
     flask_thread.join()
     telegram_thread.join()
-
