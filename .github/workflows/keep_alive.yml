@@ -2,7 +2,7 @@ name: Keep Render Alive
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # Runs every 5 minutes
+    - cron: "*/1 * * * *"  # Runs every 1 minute
 
 jobs:
   ping:
@@ -15,4 +15,5 @@ jobs:
             echo "Failed to ping app: HTTP $RESPONSE"
             exit 1
           fi
+
 
