@@ -20,7 +20,7 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 # Carica le variabili d'ambiente
-load_dotenv("C:\\Users\\forme\\Desktop\\script_dati.env")
+load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
 
 # Configurazioni
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -32,8 +32,8 @@ CHAT_ID = os.getenv("CHAT_ID")
 ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
-POST_HOUR = 17  # Ora italiana (CET/CEST)
-POST_MINUTE = 10  # Minuto
+POST_HOUR = 9  # Ora italiana (CET/CEST)
+POST_MINUTE = 11  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
