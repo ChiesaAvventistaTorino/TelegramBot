@@ -105,3 +105,4 @@ if __name__ == "__main__":
 
     flask_thread.join()
     telegram_thread.join()
+
