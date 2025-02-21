@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Render App
-        run: curl -X GET "https://your-app.onrender.com/"
+        run: curl -X GET "https://telegrambot-1a6y.onrender.com"
