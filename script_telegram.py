@@ -32,8 +32,8 @@ CHAT_ID = os.getenv("CHAT_ID")
 ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
-POST_HOUR = 12  # Ora italiana (CET/CEST)
-POST_MINUTE = 40  # Minuto
+POST_HOUR = 14  # Ora italiana (CET/CEST)
+POST_MINUTE = 00  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -88,7 +88,7 @@ async def telegram_loop():
 
         logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
 
-        if now_italy.weekday() == 4 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
+        if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
             await post_to_telegram()
             await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
         await asyncio.sleep(1)
