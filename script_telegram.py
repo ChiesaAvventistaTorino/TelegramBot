@@ -33,7 +33,7 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
 POST_HOUR = 10  # Ora italiana (CET/CEST)
-POST_MINUTE = 30  # Minuto
+POST_MINUTE = 35  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
