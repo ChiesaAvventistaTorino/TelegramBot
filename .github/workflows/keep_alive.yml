@@ -1,8 +1,8 @@
-name: Check and Deploy (Twice Daily)
+name: Check and Deploy (Every 30 Minutes)
 
 on:
   schedule:
-    - cron: "0 0,12 * * *"  # Esegui ogni giorno alle 00:00 e 12:00
+    - cron: "0,30 * * * *"  # Esegui ogni 30 minuti
 
 jobs:
   deploy:
