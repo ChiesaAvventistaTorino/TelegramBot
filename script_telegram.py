@@ -5,8 +5,7 @@ import aiohttp
 import datetime
 import logging
 import pytz  # Libreria per il fuso orario
-from telegram import Bot, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Bot
 import asyncio
 import threading
 
@@ -36,7 +35,7 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 POST_HOUR = 14  # Ora italiana (CET/CEST)
 POST_MINUTE = 00  # Minuto
 
-# Inizializza il bot Telegram (usato per invii automatici)
+# Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 # Configurazione logging
@@ -82,7 +81,6 @@ async def post_to_telegram():
             logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
             logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
-
 async def telegram_loop():
     while True:
         now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
@@ -90,49 +88,20 @@ async def telegram_loop():
 
         logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
 
-        if (now_italy.weekday() == 5 and now_italy.hour == POST_HOUR
-                and now_italy.minute == POST_MINUTE and now_italy.second == 0):
+        if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
             await post_to_telegram()
             await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
         await asyncio.sleep(1)
 
-# --- NUOVA PARTE: gestione comando /ultima ---
-
-async def ultima_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"Comando /ultima ricevuto da {update.effective_user.id}")
-    title, url = await get_latest_video()
-    if title and url:
-        message = f"📺 Ultimo video:\n{title}\n➡️ {url}"
-    else:
-        message = "⚠️ Nessun video recente trovato."
-    await update.message.reply_text(message)
-
-async def telegram_command_loop():
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Registra comando /ultima
-    application.add_handler(CommandHandler("ultima", ultima_command))
-
-    # Avvia polling per rispondere ai comandi
-    await application.run_polling()
-
-# --- fine nuova parte ---
-
-def run_telegram_loop():
+def run_telegram():
     asyncio.run(telegram_loop())
-
-def run_telegram_commands():
-    asyncio.run(telegram_command_loop())
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
-    telegram_thread = threading.Thread(target=run_telegram_loop)
-    telegram_commands_thread = threading.Thread(target=run_telegram_commands)
+    telegram_thread = threading.Thread(target=run_telegram)
 
     flask_thread.start()
     telegram_thread.start()
-    telegram_commands_thread.start()
 
     flask_thread.join()
     telegram_thread.join()
-    telegram_commands_thread.join()
