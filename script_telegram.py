@@ -5,8 +5,7 @@ import aiohttp
 import datetime
 import logging
 import pytz  # Libreria per il fuso orario
-from telegram import Bot, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Bot
 import asyncio
 import threading
 
@@ -34,7 +33,7 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
 POST_HOUR = 14  # Ora italiana (CET/CEST)
-POST_MINUTE = 0  # Minuto
+POST_MINUTE = 00  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -82,7 +81,6 @@ async def post_to_telegram():
             logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
             logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
-
 async def telegram_loop():
     while True:
         now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
@@ -95,36 +93,15 @@ async def telegram_loop():
             await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
         await asyncio.sleep(1)
 
-# --- Nuovo: handler comando /ultima ---
-async def ultima_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    title, url = await get_latest_video()
-    if title and url:
-        message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
-    else:
-        message = "Nessun video recente trovato."
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
-
-async def telegram_bot_listener():
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    application.add_handler(CommandHandler("ultima", ultima_command))
-
-    logger.info("Avvio bot Telegram in polling...")
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    await application.run_until_disconnected()
-
-async def main_telegram_tasks():
-    # Esegui in parallelo il loop dei post automatici e il listener dei comandi
-    loop_task = asyncio.create_task(telegram_loop())
-    listener_task = asyncio.create_task(telegram_bot_listener())
-
-    await asyncio.gather(loop_task, listener_task)
+def run_telegram():
+    asyncio.run(telegram_loop())
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
+    telegram_thread = threading.Thread(target=run_telegram)
 
-    asyncio.run(main_telegram_tasks())
+    flask_thread.start()
+    telegram_thread.start()
 
     flask_thread.join()
+    telegram_thread.join()
