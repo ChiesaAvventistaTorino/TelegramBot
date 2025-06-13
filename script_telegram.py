@@ -1,3 +1,4 @@
+Hai detto:
 from flask import Flask
 from dotenv import load_dotenv
 import os
@@ -5,8 +6,7 @@ import aiohttp
 import datetime
 import logging
 import pytz  # Libreria per il fuso orario
-from telegram import Bot, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Bot
 import asyncio
 import threading
 
@@ -34,7 +34,10 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
 POST_HOUR = 14  # Ora italiana (CET/CEST)
-POST_MINUTE = 0  # Minuto
+POST_MINUTE = 00  # Minuto
+
+# Inizializza il bot Telegram
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 # Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -63,46 +66,33 @@ async def get_latest_video():
         logger.error(f"Error fetching video: {e}")
         return None, None
 
-async def post_to_telegram(bot: Bot):
+async def post_to_telegram():
     title, url = await get_latest_video()
     if title and url:
         message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
+        try:
+            await bot.send_message(chat_id=CHAT_ID, text=message)
+            logger.info("Ultimo video pubblicato su Telegram.")
+        except Exception as e:
+            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
     else:
         message = "Nessun video recente trovato."
-    try:
-        await bot.send_message(chat_id=CHAT_ID, text=message)
-        logger.info("Ultimo video pubblicato su Telegram.")
-    except Exception as e:
-        logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
-
-# Nuovo handler per comando /stato
-async def handle_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"Comando /stato ricevuto da {update.effective_user.id}")
-    await update.message.reply_text("🤖 Bot attivo e funzionante!")
-
-# Loop telegram aggiornato
+        try:
+            await bot.send_message(chat_id=CHAT_ID, text=message)
+            logger.info("Messaggio 'nessun video' inviato.")
+        except Exception as e:
+            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
 async def telegram_loop():
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    while True:
+        now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
+        now_italy = now_utc.astimezone(ITALY_TZ)  # Converti all'orario italiano
 
-    # Aggiungo il comando /stato
-    application.add_handler(CommandHandler("stato", handle_stato))
+        logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
 
-    async def scheduled_post():
-        while True:
-            now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
-            now_italy = now_utc.astimezone(ITALY_TZ)  # Converti all'orario italiano
-
-            logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
-
-            if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
-                await post_to_telegram(application.bot)
-                await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
-            await asyncio.sleep(1)
-
-    asyncio.create_task(scheduled_post())
-
-    logger.info("Bot Telegram avviato")
-    await application.run_polling()
+        if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
+            await post_to_telegram()
+            await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
+        await asyncio.sleep(1)
 
 def run_telegram():
     asyncio.run(telegram_loop())
