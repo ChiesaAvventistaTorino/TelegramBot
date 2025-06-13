@@ -1,4 +1,3 @@
-Hai detto:
 from flask import Flask
 from dotenv import load_dotenv
 import os
@@ -34,7 +33,7 @@ ITALY_TZ = pytz.timezone("Europe/Rome")
 
 # Orario del post in formato 24h (ora italiana)
 POST_HOUR = 14  # Ora italiana (CET/CEST)
-POST_MINUTE = 00  # Minuto
+POST_MINUTE = 0  # Minuto
 
 # Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -82,6 +81,7 @@ async def post_to_telegram():
             logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
             logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
+
 async def telegram_loop():
     while True:
         now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
@@ -97,12 +97,29 @@ async def telegram_loop():
 def run_telegram():
     asyncio.run(telegram_loop())
 
+# --------- PARTE AGGIUNTA PER LEGGERE I MESSAGGI ---------
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, Update
+
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message and update.message.text:
+        if update.message.text.lower() == "ciao":
+            await update.message.reply_text("attivo")
+
+def run_telegram_listener():
+    app_listener = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app_listener.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), message_handler))
+    app_listener.run_polling()
+# ------------------------------------------------------------
+
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     telegram_thread = threading.Thread(target=run_telegram)
+    telegram_listener_thread = threading.Thread(target=run_telegram_listener)  # Nuovo thread per ascoltare messaggi
 
     flask_thread.start()
     telegram_thread.start()
+    telegram_listener_thread.start()
 
     flask_thread.join()
     telegram_thread.join()
+    telegram_listener_thread.join()
