@@ -4,9 +4,9 @@ import os
 import aiohttp
 import datetime
 import logging
-import pytz
+import pytz  # Libreria per il fuso orario
 from telegram import Bot, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import asyncio
 import threading
 
@@ -17,20 +17,26 @@ def home():
     return "Hello, World!"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))  # Usa la porta di Render o default 5000
     app.run(host="0.0.0.0", port=port)
 
+# Carica le variabili d'ambiente
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
 
+# Configurazioni
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+# Imposta il fuso orario italiano (CET/CEST)
 ITALY_TZ = pytz.timezone("Europe/Rome")
-POST_HOUR = 14
-POST_MINUTE = 0
 
+# Orario del post in formato 24h (ora italiana)
+POST_HOUR = 14  # Ora italiana (CET/CEST)
+POST_MINUTE = 0  # Minuto
+
+# Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -41,7 +47,9 @@ async def get_latest_video():
             async with session.get(url) as response:
                 response.raise_for_status()
                 data = await response.json()
-        logger.info(f"API Response: {data}")
+
+        logger.info(f"API Response: {data}")  # Debugging
+
         if "items" in data and data["items"]:
             video_id = data["items"][0]["id"]["videoId"]
             video_title = data["items"][0]["snippet"]["title"]
@@ -67,29 +75,28 @@ async def post_to_telegram(bot: Bot):
     except Exception as e:
         logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
 
-# Risponde se qualcuno scrive "ciao"
-async def handle_ciao(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text_received = update.message.text
-    if text_received.lower() == "ciao":
-        await update.message.reply_text("attivo")
+# Nuovo handler per comando /stato
+async def handle_stato(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"Comando /stato ricevuto da {update.effective_user.id}")
+    await update.message.reply_text("🤖 Bot attivo e funzionante!")
 
+# Loop telegram aggiornato
 async def telegram_loop():
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Comandi
-    # application.add_handler(CommandHandler("stato", handle_stato))  # Se vuoi mantenere il comando /stato
-
-    # Messaggi con testo "ciao"
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_ciao))
+    # Aggiungo il comando /stato
+    application.add_handler(CommandHandler("stato", handle_stato))
 
     async def scheduled_post():
         while True:
-            now_utc = datetime.datetime.now(pytz.utc)
-            now_italy = now_utc.astimezone(ITALY_TZ)
-            logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")
+            now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
+            now_italy = now_utc.astimezone(ITALY_TZ)  # Converti all'orario italiano
+
+            logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
+
             if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
                 await post_to_telegram(application.bot)
-                await asyncio.sleep(60)
+                await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
             await asyncio.sleep(1)
 
     asyncio.create_task(scheduled_post())
