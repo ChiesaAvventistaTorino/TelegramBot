@@ -8,7 +8,7 @@ import pytz  # Libreria per il fuso orario
 import asyncio
 import threading
 from telegram import Bot, Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackContext
 
 app = Flask(__name__)
 
@@ -96,20 +96,18 @@ async def telegram_loop():
         await asyncio.sleep(1)
 
 # Funzione per gestire il comando /stato
-def stato(update: Update, context: CallbackContext):
-    update.message.reply_text("✅ Bot attivo!")
+async def stato(update: Update, context: CallbackContext):
+    await update.message.reply_text("✅ Bot attivo!")
 
 # Funzione per avviare il bot Telegram con gestione dei comandi
 def run_telegram_bot():
-    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Aggiungi il comando /stato
-    dispatcher.add_handler(CommandHandler("stato", stato))
+    application.add_handler(CommandHandler("stato", stato))
 
-    # Avvia il polling
-    updater.start_polling()
-    updater.idle()
+    # Avvia il bot
+    application.run_polling()
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
