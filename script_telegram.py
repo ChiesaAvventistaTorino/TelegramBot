@@ -5,10 +5,9 @@ import aiohttp
 import datetime
 import logging
 import pytz  # Libreria per il fuso orario
+from telegram import Bot
 import asyncio
 import threading
-from telegram import Bot, Update
-from telegram.ext import Application, CommandHandler, CallbackContext
 
 app = Flask(__name__)
 
@@ -82,7 +81,6 @@ async def post_to_telegram():
             logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
             logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
-
 async def telegram_loop():
     while True:
         now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
@@ -95,23 +93,12 @@ async def telegram_loop():
             await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
         await asyncio.sleep(1)
 
-# Funzione per gestire il comando /stato
-async def stato(update: Update, context: CallbackContext):
-    await update.message.reply_text("✅ Bot attivo!")
-
-# Funzione per avviare il bot Telegram con gestione dei comandi
-def run_telegram_bot():
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Aggiungi il comando /stato
-    application.add_handler(CommandHandler("stato", stato))
-
-    # Avvia il bot
-    application.run_polling()
+def run_telegram():
+    asyncio.run(telegram_loop())
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
-    telegram_thread = threading.Thread(target=run_telegram_bot)  # Funzione aggiornata
+    telegram_thread = threading.Thread(target=run_telegram)
 
     flask_thread.start()
     telegram_thread.start()
