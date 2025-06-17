@@ -4,9 +4,9 @@ import os
 import aiohttp
 import datetime
 import logging
-import pytz  # Libreria per il fuso orario
+import pytz  
 from telegram import Bot, Update
-from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, MessageHandler, filters, CallbackContext
 import asyncio
 import threading
 
@@ -17,29 +17,25 @@ def home():
     return "Hello, World!"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # Usa la porta di Render o default 5000
+    port = int(os.environ.get("PORT", 5000))  
     app.run(host="0.0.0.0", port=port)
 
-# Carica le variabili d'ambiente
+# Load environment variables
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
 
-# Configurazioni
+# Configuration
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# Imposta il fuso orario italiano (CET/CEST)
+# Time zone setup
 ITALY_TZ = pytz.timezone("Europe/Rome")
+POST_HOUR = 14  
+POST_MINUTE = 0  
 
-# Orario del post in formato 24h (ora italiana)
-POST_HOUR = 14  # Ora italiana (CET/CEST)
-POST_MINUTE = 00  # Minuto
-
-# Inizializza il bot Telegram
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-# Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -51,16 +47,11 @@ async def get_latest_video():
                 response.raise_for_status()
                 data = await response.json()
 
-        logger.info(f"API Response: {data}")  # Debugging
-
         if "items" in data and data["items"]:
             video_id = data["items"][0]["id"]["videoId"]
             video_title = data["items"][0]["snippet"]["title"]
             video_url = f"https://www.youtube.com/watch?v={video_id}"
-            logger.info(f"Found latest video: {video_title} ({video_url})")
             return video_title, video_url
-        else:
-            logger.info("No videos found.")
         return None, None
     except aiohttp.ClientError as e:
         logger.error(f"Error fetching video: {e}")
@@ -70,57 +61,36 @@ async def post_to_telegram():
     title, url = await get_latest_video()
     if title and url:
         message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
-        try:
-            await bot.send_message(chat_id=CHAT_ID, text=message)
-            logger.info("Ultimo video pubblicato su Telegram.")
-        except Exception as e:
-            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
+        await bot.send_message(chat_id=CHAT_ID, text=message)
     else:
-        message = "Nessun video recente trovato."
-        try:
-            await bot.send_message(chat_id=CHAT_ID, text=message)
-            logger.info("Messaggio 'nessun video' inviato.")
-        except Exception as e:
-            logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
+        await bot.send_message(chat_id=CHAT_ID, text="Nessun video recente trovato.")
 
 async def telegram_loop():
     while True:
-        now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
-        now_italy = now_utc.astimezone(ITALY_TZ)  # Converti all'orario italiano
-
-        logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  # Formato 24 ore
+        now_italy = datetime.datetime.now(pytz.utc).astimezone(ITALY_TZ)
 
         if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
             await post_to_telegram()
-            await asyncio.sleep(60)  # Evita duplicati nello stesso minuto
+            await asyncio.sleep(60)
         await asyncio.sleep(1)
 
 def run_telegram():
     asyncio.run(telegram_loop())
 
-# Function to handle incoming messages
 async def handle_message(update: Update, context: CallbackContext):
     message_text = update.message.text.strip().lower()
 
     if message_text == "!ultima":
         title, url = await get_latest_video()
-        if title and url:
-            response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
-        else:
-            response_message = "Nessun video recente trovato."
-        
+        response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}" if title and url else "Nessun video recente trovato."
         await update.message.reply_text(response_message)
 
-# Function to set up the Telegram bot listener
 def start_bot_listener():
-    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
-    dispatcher.add_handler(message_handler)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
