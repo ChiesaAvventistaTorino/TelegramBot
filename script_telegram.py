@@ -5,7 +5,8 @@ import aiohttp
 import datetime
 import logging
 import pytz  # Libreria per il fuso orario
-from telegram import Bot
+from telegram import Bot, Update
+from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 import asyncio
 import threading
 
@@ -81,6 +82,7 @@ async def post_to_telegram():
             logger.info("Messaggio 'nessun video' inviato.")
         except Exception as e:
             logger.error(f"Errore nell'invio del messaggio su Telegram: {e}")
+
 async def telegram_loop():
     while True:
         now_utc = datetime.datetime.now(pytz.utc)  # Ottieni l'orario UTC
@@ -96,12 +98,39 @@ async def telegram_loop():
 def run_telegram():
     asyncio.run(telegram_loop())
 
+# Function to handle incoming messages
+async def handle_message(update: Update, context: CallbackContext):
+    message_text = update.message.text.strip().lower()
+
+    if message_text == "!ultima":
+        title, url = await get_latest_video()
+        if title and url:
+            response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}"
+        else:
+            response_message = "Nessun video recente trovato."
+        
+        await update.message.reply_text(response_message)
+
+# Function to set up the Telegram bot listener
+def start_bot_listener():
+    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
+    dispatcher.add_handler(message_handler)
+
+    updater.start_polling()
+    updater.idle()
+
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     telegram_thread = threading.Thread(target=run_telegram)
+    listener_thread = threading.Thread(target=start_bot_listener)
 
     flask_thread.start()
     telegram_thread.start()
+    listener_thread.start()
 
     flask_thread.join()
     telegram_thread.join()
+    listener_thread.join()
