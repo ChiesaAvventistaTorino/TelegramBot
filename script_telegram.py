@@ -80,12 +80,15 @@ async def telegram_loop():
 def run_telegram():
     asyncio.run(telegram_loop())
 
+# Nuova funzione per il comando /ultima
 async def send_latest_video(update: Update, context: CallbackContext):
     title, url = await get_latest_video()
     response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}" if title and url else "Nessun video recente trovato."
     await update.message.reply_text(response_message)
 
+# Gestione del listener in un thread separato
 def start_bot_listener():
+    asyncio.set_event_loop(asyncio.new_event_loop())  # Risolve il problema dell'evento loop
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     application.add_handler(CommandHandler("ultima", send_latest_video))
     application.run_polling()
@@ -93,7 +96,7 @@ def start_bot_listener():
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     telegram_thread = threading.Thread(target=run_telegram)
-    listener_thread = threading.Thread(target=start_bot_listener)
+    listener_thread = threading.Thread(target=start_bot_listener, daemon=True)
 
     flask_thread.start()
     telegram_thread.start()
