@@ -6,7 +6,7 @@ import datetime
 import logging
 import pytz  
 from telegram import Bot, Update
-from telegram.ext import Application, MessageHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, CallbackContext
 import asyncio
 import threading
 
@@ -20,16 +20,16 @@ def run_flask():
     port = int(os.environ.get("PORT", 5000))  
     app.run(host="0.0.0.0", port=port)
 
-# Load environment variables
+# Carica le variabili d'ambiente
 load_dotenv("C:\\Users\\Pc\\Desktop\\TelegramBot\\script_dati.env")
 
-# Configuration
+# Configurazioni
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-# Time zone setup
+# Imposta il fuso orario italiano (CET/CEST)
 ITALY_TZ = pytz.timezone("Europe/Rome")
 POST_HOUR = 14  
 POST_MINUTE = 0  
@@ -67,29 +67,27 @@ async def post_to_telegram():
 
 async def telegram_loop():
     while True:
-        now_italy = datetime.datetime.now(pytz.utc).astimezone(ITALY_TZ)
+        now_utc = datetime.datetime.now(pytz.utc)  
+        now_italy = now_utc.astimezone(ITALY_TZ)  
+
+        logger.info(f"Orario italiano attuale: {now_italy.strftime('%A %H:%M:%S')}")  
 
         if now_italy.weekday() == 5 and now_italy.hour == POST_HOUR and now_italy.minute == POST_MINUTE and now_italy.second == 0:
             await post_to_telegram()
-            await asyncio.sleep(60)
+            await asyncio.sleep(60)  
         await asyncio.sleep(1)
 
 def run_telegram():
     asyncio.run(telegram_loop())
 
-async def handle_message(update: Update, context: CallbackContext):
-    message_text = update.message.text.strip().lower()
-
-    if message_text == "!ultima":
-        title, url = await get_latest_video()
-        response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}" if title and url else "Nessun video recente trovato."
-        await update.message.reply_text(response_message)
+async def send_latest_video(update: Update, context: CallbackContext):
+    title, url = await get_latest_video()
+    response_message = f"🎥 Ultimo video: {title}\n🔴 Guarda qui: {url}" if title and url else "Nessun video recente trovato."
+    await update.message.reply_text(response_message)
 
 def start_bot_listener():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    application.add_handler(CommandHandler("ultima", send_latest_video))
     application.run_polling()
 
 if __name__ == "__main__":
